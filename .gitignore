@@ -6,6 +6,7 @@
 !.github/
 
 # Ignore Files
-*.tgz
-*.zip
+# *.tgz
+# *.zip
 *.bundle
+binaries/govc

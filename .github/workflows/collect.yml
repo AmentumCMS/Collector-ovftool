@@ -1,4 +1,4 @@
-name: ast-cli Collector
+name: ovftoolCollector
 run-name: ${{ github.actor }} is Collecting 🚀
 on:
   push:

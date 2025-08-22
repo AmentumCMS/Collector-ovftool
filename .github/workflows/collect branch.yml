@@ -1,4 +1,4 @@
-name: ast-cli Collector (Branch)
+name: ovftool Collector (Branch)
 run-name: ${{ github.actor }} is Collecting a branch 🚀
 on:
   push:
