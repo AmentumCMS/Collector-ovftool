@@ -1,4 +1,4 @@
-name: ovftoolCollector
+name: ovftool Collector
 run-name: ${{ github.actor }} is Collecting 🚀
 on:
   push:
@@ -23,71 +23,71 @@ jobs:
           echo "Values:"
           cat $GITHUB_OUTPUT
 
-  Skopeo:
-    needs: [Date]
-    runs-on: ubuntu-24.04
-    env:
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
+  # Skopeo:
+  #   needs: [Date]
+  #   runs-on: ubuntu-24.04
+  #   env:
+  #     GH_TOKEN: ${{ github.token }}
+  #   steps:
+  #     - name: Check out repository code
+  #       uses: actions/checkout@v4
 
-      - name: Install Skopeo
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y skopeo pigz
+  #     - name: Install Skopeo
+  #       run: |
+  #         sudo apt-get update -y
+  #         sudo apt-get install -y skopeo pigz
 
-      - name: DSO Login
-        run: |
-          skopeo login registry1.dso.mil \
-            -u ${{ secrets.REGISTRY_USER }} \
-            -p ${{ secrets.REGISTRY_TOKEN }}
+  #     - name: DSO Login
+  #       run: |
+  #         skopeo login registry1.dso.mil \
+  #           -u ${{ secrets.REGISTRY_USER }} \
+  #           -p ${{ secrets.REGISTRY_TOKEN }}
 
-      - name: Run Skopeo Sync
-        run: |
-          skopeo sync \
-            --src yaml --dest dir \
-            ${{ vars.COLLECTOR }}.yml \
-            ${{ vars.COLLECTOR }}
+  #     - name: Run Skopeo Sync
+  #       run: |
+  #         skopeo sync \
+  #           --src yaml --dest dir \
+  #           ${{ vars.COLLECTOR }}.yml \
+  #           ${{ vars.COLLECTOR }}
 
-      - name: Directory Contents
-        run: |
-          echo "Directory Contents"
-          ls -lAhS *
-          echo -e "\nDirectory Size"
-          du -hd1 
+  #     - name: Directory Contents
+  #       run: |
+  #         echo "Directory Contents"
+  #         ls -lAhS *
+  #         echo -e "\nDirectory Size"
+  #         du -hd1 
 
-      - name: TARchive Skopeo Output
-        run: |
-          tar -cv -Ipigz --remove-files \
-            -f ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }} \
-          | tee ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
+  #     - name: TARchive Skopeo Output
+  #       run: |
+  #         tar -cv -Ipigz --remove-files \
+  #           -f ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }} \
+  #         | tee ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
 
-      - name: Generate Hash
-        run: |
-          sha256sum -b ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz | tee \
-            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
+  #     - name: Generate Hash
+  #       run: |
+  #         sha256sum -b ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz | tee \
+  #           ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
  
-      - name: List files 
-        run: ls -Alh ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz*
+  #     - name: List files 
+  #       run: ls -Alh ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz*
 
-      - name: Upload TARchive
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+  #     - name: Upload TARchive
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+  #         path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
 
-      - name: Upload TARchive SHA
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
+  #     - name: Upload TARchive SHA
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
+  #         path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
 
-      - name: Upload TARchive ToC
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
+  #     - name: Upload TARchive ToC
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
+  #         path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
 
   Code:
     needs: [Date]
@@ -127,9 +127,121 @@ jobs:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
 
+  ghcr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
+    env:
+      REGISTRY: ghcr.io
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute normalized image name (lowercase)
+        id: names
+        run: |
+          REPO_LC="$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          echo "IMAGE=${{ env.REGISTRY }}/${REPO_LC}" >> $GITHUB_ENV
+          echo "IMAGE_SHA_TAG=${{ env.REGISTRY }}/${REPO_LC}:sha-${{ github.sha }}" >> $GITHUB_ENV
+
+      - name: Login to ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ env.GH_TOKEN }}
+
+      # Generate tags & labels (sha, branch, tag, latest on default branch)
+      - name: Docker metadata (tags, labels) for meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Show metadata
+        run: |
+          echo "Registry: ${{ env.REGISTRY }}"
+          echo "Version: ${{ steps.meta.outputs.version }}"
+          echo "Tags: ${{ steps.meta.outputs.tags }}"
+          echo "Labels: ${{ steps.meta.outputs.labels }}"
+
+      # Build & push to GHCR
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile          
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      # Save the image as a .tar artifact (pull the sha-tag we just pushed)
+      - name: Pull the pushed image (sha tag)
+        run: docker pull "${{ env.IMAGE_SHA_TAG }}"
+
+      - name: Save image to tarball
+        run: docker save "${{ env.IMAGE_SHA_TAG }}" |gzip > "${{ vars.COLLECTOR }}-${{ github.sha }}.tgz"
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ github.sha }}
+          path: ${{ vars.COLLECTOR }}-${{ github.sha }}.tgz
+          if-no-files-found: error
+
+      # Install cosign for signing (keyless via GitHub OIDC)
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      # Sign the pushed image by digest (best practice)
+      - name: Cosign sign image
+        env:
+          # --yes to avoid interactive prompt
+          COSIGN_EXPERIMENTAL: "false"  # Not needed on modern cosign; kept explicit
+        run: |
+          DIGEST="${{ steps.build.outputs.digest }}"
+          # Sign the immutable digest reference
+          cosign sign --yes "${{ env.IMAGE }}@${DIGEST}"
+
+      # (Optional) Verify signature step — helpful during initial setup
+      - name: Cosign verify signature (optional)
+        if: ${{ always() }}
+        run: |
+          DIGEST="${{ steps.build.outputs.digest }}"
+          cosign verify "${{ env.IMAGE }}@${DIGEST}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/${{ github.workflow }}@${{ github.ref }}"
+
   MakeISO:
     runs-on: ubuntu-24.04
-    needs: [Date, Code, Skopeo]
+    needs: [Date, Code, ghcr]
     env:
       GH_TOKEN: ${{ github.token }}
     permissions:
@@ -152,6 +264,20 @@ jobs:
 
       - name: Copy Markdowns to ${{ vars.COLLECTOR }} ISO
         run: cp -v *.md ${{ vars.COLLECTOR }}/
+
+      - name: Download Binaries
+        run: |
+          echo -e "\nWorking with github repo vmware/govmomi\n"
+          echo -e "Listing last release: $(gh release list -R vmware/govmomi | head -n1)"
+          echo -e "\nDownloading Latest to binaries"
+          gh release download \
+            -p "*Windows_x86_64*" \
+            -p "*Linux_x86_64*" \
+            -p "*linux_amd64*" \
+            -D binaries \
+            -R vmware/govmomi
+          cd binaries
+          echo -e "\nDirectory Listing $(ls -1Ssh)\n"
 
       - name: Show Artifacts
         run: ls -Alh ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-*.*
