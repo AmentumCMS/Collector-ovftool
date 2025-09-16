@@ -265,13 +265,13 @@ jobs:
           cosign sign --yes "${{ env.IMAGE }}@${DIGEST}"
 
       # (Optional) Verify signature step — helpful during initial setup
-      - name: Cosign verify signature (optional)
-        if: ${{ always() }}
-        run: |
-          DIGEST="${{ steps.build.outputs.digest }}"
-          cosign verify "${{ env.IMAGE }}@${DIGEST}" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/${{ github.workflow }}@${{ github.ref }}"
+      # - name: Cosign verify signature (optional)
+      #   if: ${{ always() }}
+      #   run: |
+      #     DIGEST="${{ steps.build.outputs.digest }}"
+      #     cosign verify "${{ env.IMAGE }}@${DIGEST}" \
+      #       --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+      #       --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/${{ github.workflow }}@${{ github.ref }}"
 
   MakeISO:
     runs-on: ubuntu-24.04
