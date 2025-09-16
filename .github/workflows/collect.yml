@@ -160,7 +160,7 @@ jobs:
           echo -e "\nDockerfile"
           cat Dockerfile
           echo -e "\nTar Status"
-          tar tzvf ./Binaries/*ovftool*.tgz
+          tar tzvf ./binaries/*ovftool*.tgz
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
