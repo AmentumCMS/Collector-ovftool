@@ -36,7 +36,7 @@ ENV PATH="/opt/ovftool:$PATH"
 WORKDIR /workspace
 
 # Check that stuff runs
-RUN echo -e "OVFTool Listing:\n$(ls -1Ssh /opt/ovftool/*)\n" &&\
+RUN echo -e "Opt Listing:\n$(ls -1Ssh /opt/*)\n" &&\
     govc version &&\
     /opt/ovftool/ovftool --version || exit 1
 
