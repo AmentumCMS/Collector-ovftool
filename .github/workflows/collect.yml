@@ -229,25 +229,19 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
-      - name: Docker commands
+      - name: Env info
         run: |
-          echo "Docker images:"
-          docker images
-          docker save --list
-          echo -e "\nDocker image inspect:"
-          docker image inspect "${{ env.IMAGE }}:${{ github.ref_name }}" || exit 1
-          echo -e "\nDocker image history:"
-          docker history "${{ env.IMAGE }}:${{ github.ref_name }}" || exit 1
-          echo -e "\nDocker image digests:"
-          docker image inspect "${{ env.IMAGE }}:${{ github.ref_name }}" --format='{{index .RepoDigests 0}}' || exit 1
-          docker image inspect "${{ env.IMAGE_SHA_TAG }}" --format='{{index .RepoDigests 0}}' || exit 1
+          echo "IMAGE: ${{ env.IMAGE }}"
+          echo "IMAGE_SHA_TAG: ${{ env.IMAGE_SHA_TAG }}"
+          echo "DIGEST: ${{ steps.build.outputs.digest }}"
+          echo -e "\nComplete Env:\n$(env)"
 
       # Save the image as a .tar artifact (pull the sha-tag we just pushed)
       - name: Pull the pushed image (sha tag)
-        run: docker pull "${{ env.IMAGE_SHA_TAG }}"
+        run: docker pull "${{ env.IMAGE }}"
 
       - name: Save image to tarball
-        run: docker save "${{ env.IMAGE_SHA_TAG }}" |gzip > "${{ vars.COLLECTOR }}-${{ github.sha }}.tgz"
+        run: docker save "${{ env.IMAGE }}" |gzip > "${{ vars.COLLECTOR }}-${{ github.sha }}.tgz"
 
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
