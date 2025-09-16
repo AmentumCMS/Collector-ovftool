@@ -149,15 +149,22 @@ jobs:
         id: names
         run: |
           REPO_LC="$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
-          echo "IMAGE=${{ env.REGISTRY }}/${REPO_LC}" >> $GITHUB_ENV
-          echo "IMAGE_SHA_TAG=${{ env.REGISTRY }}/${REPO_LC}:sha-${{ github.sha }}" >> $GITHUB_ENV
+          echo "IMAGE=ghcr.io/${REPO_LC}" >> $GITHUB_ENV
+          echo "IMAGE_SHA_TAG=ghcr.io/${REPO_LC}:sha-${{ github.sha }}" >> $GITHUB_ENV
 
-      - name: Login to ${{ env.REGISTRY }}
+      - name: Login to ghcr.io
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ env.GH_TOKEN }}
+
+      - name: Login to registry1.dso.mil
+        uses: docker/login-action@v3
+        with:
+          registry: registry1.dso.mil
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
 
       # Generate tags & labels (sha, branch, tag, latest on default branch)
       - name: Docker metadata (tags, labels) for meta
@@ -176,7 +183,7 @@ jobs:
 
       - name: Show metadata
         run: |
-          echo "Registry: ${{ env.REGISTRY }}"
+          echo "Registry: ghcr.io"
           echo "Version: ${{ steps.meta.outputs.version }}"
           echo "Tags: ${{ steps.meta.outputs.tags }}"
           echo "Labels: ${{ steps.meta.outputs.labels }}"
