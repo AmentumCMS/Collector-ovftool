@@ -137,7 +137,6 @@ jobs:
       id-token: write
 
     env:
-      REGISTRY: ghcr.io
       GH_TOKEN: ${{ github.token }}
 
     steps:
@@ -253,7 +252,7 @@ jobs:
 
   MakeISO:
     runs-on: ubuntu-24.04
-    needs: [Date, Code, ghcr]
+    needs: [Date, Code, Build]
     env:
       GH_TOKEN: ${{ github.token }}
     permissions:
