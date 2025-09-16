@@ -138,11 +138,20 @@ jobs:
       GH_TOKEN: ${{ github.token }}
 
     steps:
-      # - name: Checkout
-      #   uses: actions/checkout@v4
-      #   with:
-      #     lfs: true
-      #     # submodules: recursive
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          # submodules: recursive
+
+      - name: Checks
+        run: |
+          echo "Directory Listing"
+          ls -lAhS *
+          echo -e "\nDirectory Size"
+          du -hd1 .
+          echo -e "\nTar Status"
+          tar tzvf ./Binaries/*ovftool*.tar.gz
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
