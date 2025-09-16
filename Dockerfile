@@ -30,13 +30,16 @@ RUN curl -sL "https://github.com/vmware/govmomi/releases/download/${GOVC_VERSION
 
 # Add ovftool (must be manually downloaded and placed in build context)
 ADD ./binaries/VMware-ovftool-5.0.0-24781994-lin.x86_64.tgz /opt/
+RUN tar -xzvf /opt/VMware-ovftool-5.0.0-24781994-lin.x86_64.tgz -C /opt/ &&\
+    rm -f /opt/VMware-ovftool-5.0.0-24781994-lin.x86_64.tgz
+
 ENV PATH="/opt/ovftool:$PATH"
 
 # Optional: working directory
 WORKDIR /workspace
 
 # Check that stuff runs
-RUN echo -e "Opt Listing:\n$(ls -1Ssh /opt/*)\n" &&\
+RUN echo -e "Opt Listing:\n$(ls -Alht /opt/*)\n" &&\
     govc version &&\
     /opt/ovftool/ovftool --version || exit 1
 
