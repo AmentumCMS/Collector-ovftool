@@ -140,8 +140,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          lfs: true
+        # with:
+          # lfs: true
           # submodules: recursive
 
       - name: Checks
