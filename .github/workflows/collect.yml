@@ -148,12 +148,19 @@ jobs:
 
       - name: Checks
         run: |
+          git lfs pull # If using Git LFS
           echo "Directory Listing"
           ls -lAhS *
           echo -e "\nDirectory Size"
           du -hd1 .
           echo -e "\nTar Status"
-          tar tzvf ./Binaries/*ovftool*.tar.gz
+          tar tzvf ./Binaries/*ovftool*.tgz
+          echo -e "\nSha256 Sums"
+          cd Binaries
+          sha256sum -c *.sha || exit 1
+          cd ..
+          echo -e "\nDockerfile"
+          cat Dockerfile
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
