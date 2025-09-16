@@ -227,6 +227,19 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
+      - name: Docker commands
+        run: |
+          echo "Docker images:"
+          docker images
+          docker save --list
+          echo -e "\nDocker image inspect:"
+          docker image inspect "${{ env.IMAGE }}:${{ github.ref_name }}" || exit 1
+          echo -e "\nDocker image history:"
+          docker history "${{ env.IMAGE }}:${{ github.ref_name }}" || exit 1
+          echo -e "\nDocker image digests:"
+          docker image inspect "${{ env.IMAGE }}:${{ github.ref_name }}" --format='{{index .RepoDigests 0}}' || exit 1
+          docker image inspect "${{ env.IMAGE_SHA_TAG }}" --format='{{index .RepoDigests 0}}' || exit 1
+
       # Save the image as a .tar artifact (pull the sha-tag we just pushed)
       - name: Pull the pushed image (sha tag)
         run: docker pull "${{ env.IMAGE_SHA_TAG }}"
