@@ -1,6 +1,6 @@
 # What is this?
 
-[![Release](https://github.com/amentumcms/Collector-ovftool/actions/workflows/collect.yml/badge.svg?branch=main)](https://github.com/amentumcms/Collector-ovftool/actions/workflows/collect.yml)
+[![Release](https://github.com/amentumcms/Container-ovftool/actions/workflows/collect.yml/badge.svg?branch=main)](https://github.com/amentumcms/Container-ovftool/actions/workflows/collect.yml)
 
 This is a project that automatically collects artifacts to ease in air-gapped transfer from the internet.
 
