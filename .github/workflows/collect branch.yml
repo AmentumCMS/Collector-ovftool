@@ -117,13 +117,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
+          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle*
 
-      - name: Upload bundle sha
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
 
   Build:
     runs-on: ubuntu-latest
@@ -245,7 +240,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ vars.COLLECTOR }}-${{ github.sha }}
-          path: ${{ vars.COLLECTOR }}-${{ github.sha }}.tgz
+          path: ${{ vars.COLLECTOR }}-${{ github.sha }}.tgz*
           if-no-files-found: error
 
       # Install cosign for signing (keyless via GitHub OIDC)
@@ -291,7 +286,8 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v5
         with:
-          # merge-multiple: true
+          name: ${{ vars.COLLECTOR }}-${{ github.sha }},${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
+          merge-multiple: true
           path: ${{ vars.COLLECTOR }}
 
       - name: Copy Markdowns to ${{ vars.COLLECTOR }} ISO
