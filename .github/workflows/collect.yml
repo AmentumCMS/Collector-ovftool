@@ -285,24 +285,24 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
+      - name: Download Container Artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+          merge-multiple: true
+          path: ${{ vars.COLLECTOR }}
+
+      - name: Download Code Artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
+          merge-multiple: true
+          path: ${{ vars.COLLECTOR }}
+
       - name: Install mkisofs
         run: |
           sudo apt-get update -y
           sudo apt-get install -y mkisofs isomd5sum
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz,${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
-          merge-multiple: true
-          path: ${{ vars.COLLECTOR }}
-
-      # - name: Download Artifacts
-      #   uses: actions/download-artifact@v5
-      #   with:
-      #     name: ${{ vars.COLLECTOR }}-${{ github.sha }},${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
-      #     merge-multiple: true
-      #     path: ${{ vars.COLLECTOR }}
 
       - name: Copy Markdowns to ${{ vars.COLLECTOR }} ISO
         run: cp -v *.md ${{ vars.COLLECTOR }}/
