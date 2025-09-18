@@ -274,7 +274,7 @@ jobs:
       #       --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/${{ github.workflow }}@${{ github.ref }}"
 
   MakeISO:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs: [Date, Code, Build]
     env:
       GH_TOKEN: ${{ github.token }}
@@ -293,7 +293,7 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v5
         with:
-          merge-multiple: true
+          # merge-multiple: true
           path: ${{ vars.COLLECTOR }}
 
       - name: Copy Markdowns to ${{ vars.COLLECTOR }} ISO
