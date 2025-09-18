@@ -119,7 +119,6 @@ jobs:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle*
 
-
   Build:
     runs-on: ubuntu-latest
     needs: [Date]
@@ -283,17 +282,10 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v4
 
-      - name: Download Container Artifact
+      - name: Download Artifacts
         uses: actions/download-artifact@v5
         with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
-          merge-multiple: true
-          path: ${{ vars.COLLECTOR }}
-
-      - name: Download Code Artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
+          pattern: "!*.dockerbuild"
           merge-multiple: true
           path: ${{ vars.COLLECTOR }}
 
@@ -381,23 +373,11 @@ jobs:
       # - name: Check out repository code
       #   uses: actions/checkout@v4
 
-      - name: Download Container Artifacts
+      - name: Download Artifacts
         uses: actions/download-artifact@v5
         with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
           merge-multiple: true
-
-      - name: Download Code Artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
-          merge-multiple: true
-
-      - name: Download ISO Artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso
-          merge-multiple: true
+          pattern: "!*.dockerbuild"
 
       - name: Show Artifacts
         run: ls -Alh ${{ vars.COLLECTOR }}-*.*
@@ -417,20 +397,8 @@ jobs:
       - name: Download Container Artifacts
         uses: actions/download-artifact@v5
         with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
           merge-multiple: true
-
-      - name: Download Code Artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
-          merge-multiple: true
-
-      - name: Download ISO Artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso
-          merge-multiple: true
+          pattern: "!*.dockerbuild"
 
       - name: Show Artifacts
         run: ls -Alh ${{ vars.COLLECTOR }}-*.*
