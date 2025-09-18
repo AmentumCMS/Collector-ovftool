@@ -370,8 +370,8 @@ jobs:
       contents: write
       pull-requests: read
     steps:
-      # - name: Check out repository code
-      #   uses: actions/checkout@v4
+      - name: Check out repository code
+        uses: actions/checkout@v4
 
       - name: Download Artifacts
         uses: actions/download-artifact@v5
