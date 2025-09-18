@@ -297,11 +297,6 @@ jobs:
           merge-multiple: true
           path: ${{ vars.COLLECTOR }}
 
-      - name: Install mkisofs
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y mkisofs isomd5sum
-
       - name: Copy Markdowns to ${{ vars.COLLECTOR }} ISO
         run: cp -v *.md ${{ vars.COLLECTOR }}/
 
@@ -320,7 +315,7 @@ jobs:
           echo -e "\nDirectory Listing $(ls -1Ssh)\n"
 
       - name: Show Artifacts
-        run: ls -Alh ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-*.*
+        run: ls -Alh ${{ vars.COLLECTOR }}/*
 
       - name: Generate Artifact Hash File
         run: |
@@ -345,6 +340,11 @@ jobs:
           path: ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.txt
           if-no-files-found: error
 
+      - name: Install mkisofs
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y mkisofs isomd5sum
+
       - name: Make ISO
         run: |
           mkisofs -J -R -v -T -l \
@@ -361,21 +361,15 @@ jobs:
           sha256sum -b ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso | tee \
             ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
 
-      - name: Show ISO & Hash
+      - name: Show ISO Artifacts
         run: ls -Alh *.iso*
 
-      - name: Upload ISO
+      - name: Upload ISO Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso
+          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso*
           if-no-files-found: error
-
-      - name: Upload ISO Hash
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
-          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
 
   Release:
     runs-on: ubuntu-24.04
@@ -384,12 +378,25 @@ jobs:
       contents: write
       pull-requests: read
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
+      # - name: Check out repository code
+      #   uses: actions/checkout@v4
 
-      - name: Download Artifacts
+      - name: Download Container Artifacts
         uses: actions/download-artifact@v5
         with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+          merge-multiple: true
+
+      - name: Download Code Artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
+          merge-multiple: true
+
+      - name: Download ISO Artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso
           merge-multiple: true
 
       - name: Show Artifacts
@@ -407,9 +414,22 @@ jobs:
       contents: write
       pull-requests: read
     steps:
-      - name: Download Artifacts
+      - name: Download Container Artifacts
         uses: actions/download-artifact@v5
         with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+          merge-multiple: true
+
+      - name: Download Code Artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
+          merge-multiple: true
+
+      - name: Download ISO Artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso
           merge-multiple: true
 
       - name: Show Artifacts
