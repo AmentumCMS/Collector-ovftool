@@ -304,24 +304,32 @@ jobs:
 
       - name: Download Binaries
         run: |
+          BIN_DIR="${{ vars.COLLECTOR }}/binaries"
+          mkdir -p "$BIN_DIR"
+
           echo -e "\nWorking with github repo vmware/govmomi\n"
           echo -e "Listing last release: $(gh release list -R vmware/govmomi | head -n1)"
-          echo -e "\nDownloading Latest to binaries"
+          echo -e "\nDownloading latest govc binaries to $BIN_DIR"
           gh release download \
             -p "*Windows_x86_64*" \
             -p "*Linux_x86_64*" \
             -p "*linux_amd64*" \
-            -D binaries \
+            -D "$BIN_DIR" \
             -R vmware/govmomi
-          cd binaries
-          echo -e "\nDirectory Listing $(ls -1Ssh)\n"
+
+          echo -e "\nDownloading latest OVF Tool Linux/Windows binaries to $BIN_DIR"
+          chmod +x scripts/get_ovftool_latest_binaries.sh
+          ./scripts/get_ovftool_latest_binaries.sh "$BIN_DIR"
+
+          echo -e "\nBinaries Directory Listing"
+          ls -Alh "$BIN_DIR"
 
       - name: Show Artifacts
         run: ls -Alh ${{ vars.COLLECTOR }}/*
 
       - name: Generate Artifact Hash File
         run: |
-          sha256sum -b ${{ vars.COLLECTOR }}/*.* | tee \
+          find ${{ vars.COLLECTOR }} -type f -print0 | xargs -0 sha256sum -b | tee \
           ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.sha
 
       - name: Upload Artifact Hash File
@@ -341,6 +349,23 @@ jobs:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.txt
           path: ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.txt
           if-no-files-found: error
+
+      - name: Assert expected OVF binaries exist before mkisofs
+        run: |
+          set -euo pipefail
+          BIN_DIR="${{ vars.COLLECTOR }}/binaries"
+          echo "Checking required OVF binaries in ${BIN_DIR}"
+          test -d "$BIN_DIR" || { echo "Missing binaries directory: $BIN_DIR" >&2; exit 1; }
+
+          LINUX_COUNT=$(find "$BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-lin.x86_64.zip' | wc -l)
+          WIN_ZIP_COUNT=$(find "$BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-win.x86_64.zip' | wc -l)
+          WIN_MSI_COUNT=$(find "$BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-win.x86_64.msi' | wc -l)
+
+          [[ "$LINUX_COUNT" -ge 1 ]] || { echo "Missing expected Linux OVF zip in $BIN_DIR" >&2; exit 1; }
+          [[ "$WIN_ZIP_COUNT" -ge 1 ]] || { echo "Missing expected Windows OVF zip in $BIN_DIR" >&2; exit 1; }
+          [[ "$WIN_MSI_COUNT" -ge 1 ]] || { echo "Missing expected Windows OVF msi in $BIN_DIR" >&2; exit 1; }
+
+          echo "OVF binary assertion passed"
 
       - name: Install mkisofs
         run: |
