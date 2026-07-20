@@ -135,12 +135,25 @@ jobs:
           ls -lAhS *
           echo -e "\nDirectory Size"
           du -hd1 .
-          echo -e "\nSha256 Sums"
-          cd binaries
-          sha256sum -c *.sha || exit 1
-          echo -e "\nTar Status"
-          tar -tzvf *ovftool*.tgz
-          cd ..
+          echo -e "\nValidate live OVF binary retrieval"
+          TMP_BIN_DIR="$(mktemp -d)"
+          chmod +x scripts/get_ovftool_latest_binaries.sh
+          ./scripts/get_ovftool_latest_binaries.sh "$TMP_BIN_DIR"
+          ls -Alh "$TMP_BIN_DIR"
+
+          LINUX_ZIP_COUNT=$(find "$TMP_BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-lin.x86_64.zip' | wc -l)
+          WIN_ZIP_COUNT=$(find "$TMP_BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-win.x86_64.zip' | wc -l)
+          WIN_MSI_COUNT=$(find "$TMP_BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-win.x86_64.msi' | wc -l)
+
+          [[ "$LINUX_ZIP_COUNT" -ge 1 ]] || { echo "Missing expected Linux OVF zip" >&2; exit 1; }
+          [[ "$WIN_ZIP_COUNT" -ge 1 ]] || { echo "Missing expected Windows OVF zip" >&2; exit 1; }
+          [[ "$WIN_MSI_COUNT" -ge 1 ]] || { echo "Missing expected Windows OVF msi" >&2; exit 1; }
+
+          unzip -tq "$TMP_BIN_DIR"/*lin.x86_64.zip
+          unzip -tq "$TMP_BIN_DIR"/*win.x86_64.zip
+          sha256sum -b "$TMP_BIN_DIR"/*
+          rm -rf "$TMP_BIN_DIR"
+
           echo -e "\nDockerfile"
           cat Dockerfile
 
@@ -249,7 +262,7 @@ jobs:
 
       # Install cosign for signing (keyless via GitHub OIDC)
       - name: Install cosign
-        uses: sigstore/cosign-installer@v4
+        uses: sigstore/cosign-installer@v4.1.2
 
       # Sign the pushed image by digest (best practice)
       - name: Cosign sign image
