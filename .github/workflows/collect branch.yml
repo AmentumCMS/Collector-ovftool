@@ -154,6 +154,11 @@ jobs:
           echo -e "\nDockerfile"
           cat Dockerfile
 
+      - name: Fail fast on Broadcom parser drift
+        run: |
+          chmod +x scripts/check_ovftool_parser_drift.sh
+          ./scripts/check_ovftool_parser_drift.sh
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -177,6 +182,11 @@ jobs:
           registry: registry1.dso.mil
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: Validate final container can execute ovftool --version
+        run: |
+          docker build --target runtime -t ovftool-ci-validate .
+          docker run --rm --entrypoint ovftool ovftool-ci-validate --version
 
       # Generate tags & labels (sha, branch, tag, latest on default branch)
       - name: Docker metadata (tags, labels) for meta
