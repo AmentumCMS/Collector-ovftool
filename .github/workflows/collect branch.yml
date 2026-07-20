@@ -165,14 +165,14 @@ jobs:
           echo "IMAGE_SHA_TAG=ghcr.io/${REPO_LC}:sha-${{ github.sha }}" >> $GITHUB_ENV
 
       - name: Login to ghcr.io
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ env.GH_TOKEN }}
 
       - name: Login to registry1.dso.mil
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: registry1.dso.mil
           username: ${{ secrets.REGISTRY_USER }}
