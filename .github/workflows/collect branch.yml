@@ -181,7 +181,7 @@ jobs:
       # Generate tags & labels (sha, branch, tag, latest on default branch)
       - name: Docker metadata (tags, labels) for meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE }}
           tags: |
