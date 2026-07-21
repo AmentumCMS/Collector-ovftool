@@ -1,0 +1,6 @@
+ghcr.io:
+  images:
+    amentumcms/container-ovftool:
+      - latest
+      - main
+      - wip
