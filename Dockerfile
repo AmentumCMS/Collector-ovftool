@@ -40,7 +40,10 @@ LABEL maintainer="Amentum CMS NISSC2" \
       description="Containerized OVF export tool with govc and ovftool on UBI"
 
 # Install runtime dependencies only
-RUN microdnf install -y \
+RUN microdnf update -y &&\
+# Install required packages
+    microdnf install -y \
+    jq unzip tar pigz gzip \
     libnsl2 glibc-langpack-en libxcrypt-compat \
     && microdnf clean all
 
