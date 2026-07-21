@@ -452,8 +452,8 @@ jobs:
           CERT_PEM="${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}-codesign-cert.pem"
 
           echo "$CODE_SIGN_CERT_B64" | base64 -d > "$CERT_P12"
-          openssl pkcs12 -in "$CERT_P12" -nocerts -nodes -passin env:CODE_SIGN_CERT_PASS -out "$KEY_PEM"
-          openssl pkcs12 -in "$CERT_P12" -clcerts -nokeys -passin env:CODE_SIGN_CERT_PASS -out "$CERT_PEM"
+          openssl pkcs12 -legacy -in "$CERT_P12" -nocerts -nodes -passin env:CODE_SIGN_CERT_PASS -out "$KEY_PEM"
+          openssl pkcs12 -legacy -in "$CERT_P12" -clcerts -nokeys -passin env:CODE_SIGN_CERT_PASS -out "$CERT_PEM"
 
           SIGNED_COUNT=0
           for f in ${{ vars.COLLECTOR }}-*.*; do
