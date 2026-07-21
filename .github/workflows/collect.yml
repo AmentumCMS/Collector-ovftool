@@ -426,6 +426,36 @@ jobs:
           git config user.name "$(git log -n 1 --pretty=format:%an)"
           git config user.email "$(git log -n 1 --pretty=format:%ae)"
 
+      - name: Optionally sign release artifacts (PKCS#12)
+        env:
+          CODE_SIGN_CERT_B64: ${{ secrets.CODE_SIGN_CERT_PAPPASJ }}
+          CODE_SIGN_CERT_PASS: ${{ secrets.CODE_SIGN_CERT_PASS }}
+        run: |
+          set -eo pipefail
+          if [[ -z "${CODE_SIGN_CERT_B64:-}" || -z "${CODE_SIGN_CERT_PASS:-}" ]]; then
+            echo "PKCS#12 signing secrets/vars not set; skipping artifact signing."
+            exit 0
+          fi
+
+          CERT_P12="codesign.p12"
+          KEY_PEM="codesign.key.pem"
+          CERT_PEM="${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}-codesign-cert.pem"
+
+          echo "$CODE_SIGN_CERT_B64" | base64 -d > "$CERT_P12"
+          openssl pkcs12 -in "$CERT_P12" -nocerts -nodes -passin env:CODE_SIGN_CERT_PASS -out "$KEY_PEM"
+          openssl pkcs12 -in "$CERT_P12" -clcerts -nokeys -passin env:CODE_SIGN_CERT_PASS -out "$CERT_PEM"
+
+          SIGNED_COUNT=0
+          for f in ${{ vars.COLLECTOR }}-*.*; do
+            [[ -f "$f" ]] || continue
+            openssl dgst -sha256 -sign "$KEY_PEM" -out "${f}.sig" "$f"
+            SIGNED_COUNT=$((SIGNED_COUNT+1))
+          done
+
+          echo "Signed $SIGNED_COUNT artifact files."
+          ls -Alh ${{ vars.COLLECTOR }}-*.*.sig "$CERT_PEM"
+          rm -f "$CERT_P12" "$KEY_PEM"
+
       - name: Create tag
         uses: rickstaa/action-create-tag@v1
         id: tag_create
@@ -448,6 +478,8 @@ jobs:
             ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.zip
             ${{ vars.COLLECTOR }}*.gz
             ${{ vars.COLLECTOR }}*.txt
+            ${{ vars.COLLECTOR }}-*.*.sig
+            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}-codesign-cert.pem
 
   Sharepoint:
     runs-on: ubuntu-24.04
