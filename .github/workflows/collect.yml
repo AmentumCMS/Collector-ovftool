@@ -23,66 +23,66 @@ jobs:
           echo "Values:"
           cat $GITHUB_OUTPUT
 
-  # Skopeo:
-  #   needs: [Date]
-  #   runs-on: ubuntu-24.04
-  #   env:
-  #     GH_TOKEN: ${{ github.token }}
-  #   steps:
-  #     - name: Check out repository code
-  #       uses: actions/checkout@v4
+  Skopeo:
+    needs: [Date, Build]
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v7
 
-  #     - name: Install Skopeo
-  #       run: |
-  #         sudo apt-get update -y
-  #         sudo apt-get install -y skopeo pigz
+      - name: Install Skopeo
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y skopeo pigz
 
-  #     - name: DSO Login
-  #       run: |
-  #         skopeo login registry1.dso.mil \
-  #           -u ${{ secrets.REGISTRY_USER }} \
-  #           -p ${{ secrets.REGISTRY_TOKEN }}
+      - name: Login to ghcr.io
+        run: |
+          skopeo login ghcr.io \
+            -u ${{ github.actor }} \
+            -p ${{ env.GH_TOKEN }}
 
-  #     - name: Run Skopeo Sync
-  #       run: |
-  #         skopeo sync \
-  #           --src yaml --dest dir \
-  #           ${{ vars.COLLECTOR }}.yml \
-  #           ${{ vars.COLLECTOR }}
+      - name: Run Skopeo Sync
+        run: |
+          skopeo sync \
+            --src yaml --dest dir \
+            ovftool.yml \
+            ${{ vars.COLLECTOR }}-skopeo
 
-  #     - name: Directory Contents
-  #       run: |
-  #         echo "Directory Contents"
-  #         ls -lAhS *
-  #         echo -e "\nDirectory Size"
-  #         du -hd1 
+      - name: Directory Contents
+        run: |
+          echo "Directory Contents"
+          ls -lAhS *
+          echo -e "\nDirectory Size"
+          du -hd1
 
-  #     - name: TARchive Skopeo Output
-  #       run: |
-  #         tar -cv -Ipigz --remove-files \
-  #           -f ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }} \
-  #         | tee ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
+      - name: TARchive Skopeo Output
+        run: |
+          tar -cv -Ipigz --remove-files \
+            -f ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }}-skopeo \
+          | tee ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.txt
 
-  #     - name: Generate Hash
-  #       run: |
-  #         sha256sum -b ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz | tee \
-  #           ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
- 
-  #     - name: List files 
-  #       run: ls -Alh ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz*
+      - name: Generate Hash
+        run: |
+          sha256sum -b ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz | tee \
+            ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz.sha
 
-  #     - name: Upload TARchive
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
-  #         path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz*
+      - name: List files
+        run: ls -Alh ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz*
+
+      - name: Upload TARchive
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz
+          path: ${{ vars.COLLECTOR }}-skopeo-${{ needs.Date.outputs.Date }}.tgz*
 
   Code:
     needs: [Date]
     runs-on: ubuntu-24.04
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Git
         run: |
@@ -104,7 +104,7 @@ jobs:
             ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
 
       - name: Upload bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle*
@@ -116,6 +116,7 @@ jobs:
       contents: read
       packages: write
       attestations: write
+      artifact-metadata: write
       id-token: write
 
     env:
@@ -123,7 +124,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           lfs: true
           # submodules: recursive
@@ -135,17 +136,35 @@ jobs:
           ls -lAhS *
           echo -e "\nDirectory Size"
           du -hd1 .
-          echo -e "\nSha256 Sums"
-          cd binaries
-          sha256sum -c *.sha || exit 1
-          echo -e "\nTar Status"
-          tar -tzvf *ovftool*.tgz
-          cd ..
+          echo -e "\nValidate live OVF binary retrieval"
+          TMP_BIN_DIR="$(mktemp -d)"
+          chmod +x scripts/get_ovftool_latest_binaries.sh
+          ./scripts/get_ovftool_latest_binaries.sh "$TMP_BIN_DIR"
+          ls -Alh "$TMP_BIN_DIR"
+
+          LINUX_ZIP_COUNT=$(find "$TMP_BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-lin.x86_64.zip' | wc -l)
+          WIN_ZIP_COUNT=$(find "$TMP_BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-win.x86_64.zip' | wc -l)
+          WIN_MSI_COUNT=$(find "$TMP_BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-win.x86_64.msi' | wc -l)
+
+          [[ "$LINUX_ZIP_COUNT" -ge 1 ]] || { echo "Missing expected Linux OVF zip" >&2; exit 1; }
+          [[ "$WIN_ZIP_COUNT" -ge 1 ]] || { echo "Missing expected Windows OVF zip" >&2; exit 1; }
+          [[ "$WIN_MSI_COUNT" -ge 1 ]] || { echo "Missing expected Windows OVF msi" >&2; exit 1; }
+
+          unzip -tq "$TMP_BIN_DIR"/*lin.x86_64.zip
+          unzip -tq "$TMP_BIN_DIR"/*win.x86_64.zip
+          sha256sum -b "$TMP_BIN_DIR"/*
+          rm -rf "$TMP_BIN_DIR"
+
           echo -e "\nDockerfile"
           cat Dockerfile
 
+      - name: Fail fast on Broadcom parser drift
+        run: |
+          chmod +x scripts/check_ovftool_parser_drift.sh
+          ./scripts/check_ovftool_parser_drift.sh
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Compute normalized image name (lowercase)
         id: names
@@ -155,23 +174,28 @@ jobs:
           echo "IMAGE_SHA_TAG=ghcr.io/${REPO_LC}:sha-${{ github.sha }}" >> $GITHUB_ENV
 
       - name: Login to ghcr.io
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ env.GH_TOKEN }}
 
       - name: Login to registry1.dso.mil
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: registry1.dso.mil
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_TOKEN }}
 
+      - name: Validate final container can execute ovftool --version
+        run: |
+          docker build --target runtime -t ovftool-ci-validate .
+          docker run --rm --entrypoint ovftool ovftool-ci-validate --version
+
       # Generate tags & labels (sha, branch, tag, latest on default branch)
       - name: Docker metadata (tags, labels) for meta
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.IMAGE }}
           tags: |
@@ -193,7 +217,7 @@ jobs:
       # Build & push to GHCR
       - name: Build and push
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           # file: ./Dockerfile
@@ -205,7 +229,7 @@ jobs:
           provenance: true
 
       - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.IMAGE }}
           subject-digest: ${{ steps.build.outputs.digest }}
@@ -231,7 +255,7 @@ jobs:
             ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz*
@@ -239,7 +263,7 @@ jobs:
 
       # Install cosign for signing (keyless via GitHub OIDC)
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@v4.1.2
 
       # Sign the pushed image by digest (best practice)
       - name: Cosign sign image
@@ -262,7 +286,7 @@ jobs:
 
   MakeISO:
     runs-on: ubuntu-latest
-    needs: [Date, Code, Build]
+    needs: [Date, Code, Build, Skopeo]
     env:
       GH_TOKEN: ${{ github.token }}
     permissions:
@@ -270,10 +294,10 @@ jobs:
       pull-requests: read
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           pattern: "!*.dockerbuild"
           merge-multiple: true
@@ -284,28 +308,36 @@ jobs:
 
       - name: Download Binaries
         run: |
+          BIN_DIR="${{ vars.COLLECTOR }}/binaries"
+          mkdir -p "$BIN_DIR"
+
           echo -e "\nWorking with github repo vmware/govmomi\n"
           echo -e "Listing last release: $(gh release list -R vmware/govmomi | head -n1)"
-          echo -e "\nDownloading Latest to binaries"
+          echo -e "\nDownloading latest govc binaries to $BIN_DIR"
           gh release download \
             -p "*Windows_x86_64*" \
             -p "*Linux_x86_64*" \
             -p "*linux_amd64*" \
-            -D binaries \
+            -D "$BIN_DIR" \
             -R vmware/govmomi
-          cd binaries
-          echo -e "\nDirectory Listing $(ls -1Ssh)\n"
+
+          echo -e "\nDownloading latest OVF Tool Linux/Windows binaries to $BIN_DIR"
+          chmod +x scripts/get_ovftool_latest_binaries.sh
+          ./scripts/get_ovftool_latest_binaries.sh "$BIN_DIR"
+
+          echo -e "\nBinaries Directory Listing"
+          ls -Alh "$BIN_DIR"
 
       - name: Show Artifacts
         run: ls -Alh ${{ vars.COLLECTOR }}/*
 
       - name: Generate Artifact Hash File
         run: |
-          sha256sum -b ${{ vars.COLLECTOR }}/*.* | tee \
+          find ${{ vars.COLLECTOR }} -type f -print0 | xargs -0 sha256sum -b | tee \
           ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.sha
 
       - name: Upload Artifact Hash File
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.sha
           path: ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.sha
@@ -316,11 +348,28 @@ jobs:
             | tee ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.txt
 
       - name: Upload iso ToC artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.txt
           path: ${{ vars.COLLECTOR }}/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.txt
           if-no-files-found: error
+
+      - name: Assert expected OVF binaries exist before mkisofs
+        run: |
+          set -euo pipefail
+          BIN_DIR="${{ vars.COLLECTOR }}/binaries"
+          echo "Checking required OVF binaries in ${BIN_DIR}"
+          test -d "$BIN_DIR" || { echo "Missing binaries directory: $BIN_DIR" >&2; exit 1; }
+
+          LINUX_COUNT=$(find "$BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-lin.x86_64.zip' | wc -l)
+          WIN_ZIP_COUNT=$(find "$BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-win.x86_64.zip' | wc -l)
+          WIN_MSI_COUNT=$(find "$BIN_DIR" -maxdepth 1 -type f -name 'VMware-ovftool-*-win.x86_64.msi' | wc -l)
+
+          [[ "$LINUX_COUNT" -ge 1 ]] || { echo "Missing expected Linux OVF zip in $BIN_DIR" >&2; exit 1; }
+          [[ "$WIN_ZIP_COUNT" -ge 1 ]] || { echo "Missing expected Windows OVF zip in $BIN_DIR" >&2; exit 1; }
+          [[ "$WIN_MSI_COUNT" -ge 1 ]] || { echo "Missing expected Windows OVF msi in $BIN_DIR" >&2; exit 1; }
+
+          echo "OVF binary assertion passed"
 
       - name: Install mkisofs
         run: |
@@ -347,7 +396,7 @@ jobs:
         run: ls -Alh *.iso*
 
       - name: Upload ISO Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso*
@@ -361,10 +410,10 @@ jobs:
       pull-requests: read
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           merge-multiple: true
           pattern: "!*.dockerbuild"
@@ -377,6 +426,36 @@ jobs:
           git config user.name "$(git log -n 1 --pretty=format:%an)"
           git config user.email "$(git log -n 1 --pretty=format:%ae)"
 
+      - name: Optionally sign release artifacts (PKCS#12)
+        env:
+          CODE_SIGN_CERT_B64: ${{ secrets.CODE_SIGN_CERT_PAPPASJ }}
+          CODE_SIGN_CERT_PASS: ${{ secrets.CODE_SIGN_CERT_PASS }}
+        run: |
+          set -eo pipefail
+          if [[ -z "${CODE_SIGN_CERT_B64:-}" || -z "${CODE_SIGN_CERT_PASS:-}" ]]; then
+            echo "PKCS#12 signing secrets/vars not set; skipping artifact signing."
+            exit 0
+          fi
+
+          CERT_P12="codesign.p12"
+          KEY_PEM="codesign.key.pem"
+          CERT_PEM="${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}-codesign-cert.pem"
+
+          echo "$CODE_SIGN_CERT_B64" | base64 -d > "$CERT_P12"
+          openssl pkcs12 -legacy -in "$CERT_P12" -nocerts -nodes -passin env:CODE_SIGN_CERT_PASS -out "$KEY_PEM"
+          openssl pkcs12 -legacy -in "$CERT_P12" -clcerts -nokeys -passin env:CODE_SIGN_CERT_PASS -out "$CERT_PEM"
+
+          SIGNED_COUNT=0
+          for f in ${{ vars.COLLECTOR }}-*.*; do
+            [[ -f "$f" ]] || continue
+            openssl dgst -sha256 -sign "$KEY_PEM" -out "${f}.sig" "$f"
+            SIGNED_COUNT=$((SIGNED_COUNT+1))
+          done
+
+          echo "Signed $SIGNED_COUNT artifact files."
+          ls -Alh ${{ vars.COLLECTOR }}-*.*.sig "$CERT_PEM"
+          rm -f "$CERT_P12" "$KEY_PEM"
+
       - name: Create tag
         uses: rickstaa/action-create-tag@v1
         id: tag_create
@@ -388,7 +467,7 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: ${{ vars.COLLECTOR }} ${{ needs.Date.outputs.Date }}
           tag_name: ${{ needs.Date.outputs.Date }}
@@ -399,6 +478,8 @@ jobs:
             ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.zip
             ${{ vars.COLLECTOR }}*.gz
             ${{ vars.COLLECTOR }}*.txt
+            ${{ vars.COLLECTOR }}-*.*.sig
+            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}-codesign-cert.pem
 
   Sharepoint:
     runs-on: ubuntu-24.04
@@ -408,7 +489,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Download Container Artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           merge-multiple: true
           pattern: "!*.dockerbuild"
@@ -417,7 +498,7 @@ jobs:
         run: ls -Alh ${{ vars.COLLECTOR }}-*.*
 
       - name: Send Files to Sharepoint
-        uses: amentumcms/sharepoint-file-upload-action@main
+        uses: amentumcms/sharepoint-file-upload-action@v1.1.0-US
         with:
           file_path: "${{ vars.COLLECTOR }}-*.*"
           host_name: ${{ secrets.SHAREPOINT_HOST }}
