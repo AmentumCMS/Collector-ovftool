@@ -4,3 +4,6 @@ ghcr.io:
       - latest
       - main
       - wip
+docker.io:
+    images-by-tag-regex:
+        vmware/vcsim: ^latest$
