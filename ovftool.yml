@@ -1,0 +1,9 @@
+ghcr.io:
+  images:
+    amentumcms/container-ovftool:
+      - latest
+      - main
+      - wip
+docker.io:
+    images-by-tag-regex:
+        vmware/vcsim: ^latest$
